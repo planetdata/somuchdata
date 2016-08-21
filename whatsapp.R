@@ -1,28 +1,17 @@
 install.packages("ggplot2")
-install.packages("gdata")
 install.packages("tidyr")
 install.packages("lubridate")
 install.packages("readr")
 install.packages("stringr")
-install.packages("readxl")
 install.packages("dplyr")
 
-# changes here 
+
 library(ggplot2)
-library(gdata)
 library(tidyr)
 library(lubridate)
 library(readr)
 library(stringr)
-library(readxl)
 library(dplyr)
-
-rm(chat)
-rm(chat1)
-rm(chat2)
-rm(chat3)
-rm(chat4)
-rm(chat5)
 
 
 path<- file.path("C:","Users","Amita","Downloads","chat.csv")
@@ -38,7 +27,6 @@ chat2$Person<-gsub("[^[:alnum:][:blank:]+?&/\\]", "", chat2$Person)
 chat2$Person<-gsub("['â'|'Â']", "", chat2$Person)
 chat2$`AM/PM`<- gsub(":","",chat2$`AM/PM`)
 
-#View(chat2)
 remove1<-which(chat2$Person=="Messages")
 chat2<-chat2[-remove1,] 
 chat2$Person<-str_replace_all(chat2$Person,"^.*2623949$","Person1")
@@ -65,9 +53,6 @@ ggplot(chat3, aes(x = Month, fill = Person)) +
 
 # Number of messages during AM/PM,across months facetted year
 chat4<- chat2
-
-chat4$row <- 1:nrow(chat4) # add a unique identifier
-
 ggplot(chat4,aes(x=Month,fill=factor(`AM/PM`))) + 
   stat_count(position = "dodge", show.legend = TRUE) +
   ggtitle("Whatsapp Group conversations by Month") +
