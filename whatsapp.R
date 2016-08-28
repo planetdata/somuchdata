@@ -111,5 +111,3 @@ ggplot(chat5,aes(x=Hour,fill=Person)) + stat_count(position="dodge", show.legend
 
 
 
-
-
