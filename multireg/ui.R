@@ -1,12 +1,7 @@
-# Define UI for application 
+
 shinyUI(fluidPage(
-  
-  # Application title
-  
-  titlePanel("Multivariate Regression"),
-  
-  # Sidebar 
-  #
+   titlePanel("Multivariate Regression"),
+
   sidebarLayout(
     sidebarPanel(      
       selectInput("dataset", h5("Choose a dataset:"), choices = c("States")),        
@@ -14,20 +9,15 @@ shinyUI(fluidPage(
       uiOutput('dv'),    
       HTML('</br>')),
     
-    # main panel 
-    
     mainPanel(
       tabsetPanel(type = "tabs", 
                   tabPanel("Data",
-                           HTML("</br>Select a data set from the 'Choose a dataset menu'</br> </br>"),
-                           numericInput("obs", label = h5("Number of observations to view"), 10),
+                           HTML("</br>Select a data set form the dropdown menu on your left'</br> </br>"),
+                           numericInput("obs", label = h5("Enter the number of observations to view"), 25),
                            tableOutput("view")),
                   
-    #              tabPanel("Summary Statistics",
-    #                       verbatimTextOutput("summary")),
                   
-                  
-                  tabPanel("Model",                   
+                  tabPanel("The Model Summary",                   
                            verbatimTextOutput("model")),
                   
                   
@@ -39,7 +29,6 @@ shinyUI(fluidPage(
                            plotOutput("residuals_residlev")),
                   
                   
-          
                tabPanel("Predictions",
                            verbatimTextOutput("predView"))
 
