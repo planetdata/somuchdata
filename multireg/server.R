@@ -18,12 +18,14 @@ shinyServer(function(input, output) {
   datasetInput <- reactive({
     switch(input$dataset,
            "States" = st
+           
     )
   })
   
   # dependent variable
   output$dv = renderUI({
-    selectInput('dv', h5('Dependent Variable'), choices = names(datasetInput())[-c(1,7,8,9)])
+
+  selectInput('dv', h5('Dependent Variable'), choices = names(datasetInput())[-c(1,7,8,9)])  
   })
   
   # regression formula
@@ -135,11 +137,57 @@ shinyServer(function(input, output) {
     
   })
   
+  #predicted values
+  
+  pred_val<- reactive({                 
+    
+    round(predict(modelnew(),newdata= datasetInput()),2)
+    
+  })
+  
+  # observed response variable values
+  
+  obs_val <- reactive({
+    datasetInput()[input$dv]
+    
+  })
+    
+  # mean of observed value
+  mean_obs <- reactive({
+    mean(obs_val())
+    
+  })
+    
+   
+  SS_total <- reactive({
+    
+    sum((obs_val()-mean_obs())^2)
+    
+  })
+  
+  
+  SS_regression <- reactive({
+    
+    sum((pred_val()-mean_obs())^2)
+    
+  })
+  
+  SS_error <- reactive({
+    
+    sum((obs_val()-pred_val())^2)
+    
+  })
+  
+  
+  
   output$predView <- renderPrint({
 
      cbind("observed values:"= datasetInput()[input$dv],"predicted values:"= round(predict(modelnew(),newdata= datasetInput()),2))
 
   })
+  
+  
+    
   
   
 })
