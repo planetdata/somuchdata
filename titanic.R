@@ -1,6 +1,5 @@
 # read in data
 dat<-read.csv("C:/Users/Amita/Downloads/train (1).csv",header=T,sep=",",na.strings = c(""))
-test <- read.csv("C:/Users/Amita/Downloads/test (1).csv",header=T,sep=",",na.strings = c("")) 
 
 # visually inspect the data for missing values.
 require(Amelia)
@@ -22,14 +21,6 @@ dat[is.na(dat$Embarked),][["Embarked"]]<-"S"
 summary(dat)
 
 dat <- dat[,-9] # remove ticket
-
-test[is.na(test$Age),][5]<- mean(test$Age,na.rm=T) 
-
-test[is.na(test$Fare),][["Fare"]] <- mean(test$Fare,na.rm=TRUE)
-
-test <- test[,-8] # remove ticket
-
-summary(test)
 
 
 # process the 'Name' column.
@@ -82,9 +73,9 @@ unit
 dat$unit <- unit
 
 # designate Cabins
-dat$Cabin <- substr(dat$Cabin,1,1)
-dat$Cabin[dat$Cabin %in% c("F","G","T",NA)] <- "X"
-dat$Cabin<- factor(dat$Cabin)
+#dat$Cabin <- substr(dat$Cabin,1,1)
+#dat$Cabin[dat$Cabin %in% c("F","G","T",NA)] <- "X"
+#dat$Cabin<- factor(dat$Cabin)
 
 
 # Child ?
@@ -97,11 +88,11 @@ dat$isMother<- factor(dat$isMother)
 
 
 
+#dat$Survived <- factor(ifelse(dat$Survived==1,"yes","no"))
 dat$Survived <- factor(dat$Survived)
+
 dat$unit <- factor(dat$unit)
-dat <- dat[,-4] # remove Names
-
-
+dat <- dat[,-c(4,10)] # remove Names and cabin
 
 # split dat into training and test dataset
 set.seed(50)
@@ -111,11 +102,34 @@ shuffled <- dat[sample(n),]
 traindat <- shuffled[1:round(0.6*n),]
 testdat<- shuffled[(round(0.6*n) + 1):n,]
 
-
-
 dim(traindat)
 dim(testdat)
 
+
+
+#nnet
+
+install.packages("neuralnet")
+require(neuralnet)
+
+nnet.model <- train(Survived ~ ., 
+                    data=traindat, method="nnet")
+
+
+plot(nnet.model)
+res2 = predict(nnet.model, newdata=testdat[,-2])
+
+
+conf<- table(testdat$Survived,res2)
+accuracy<- sum(diag(conf))/sum(conf)
+accuracy #83.14
+
+
+
+
+
+
+# random forest
 require(caret)
 require(ranger)
 
@@ -131,19 +145,91 @@ model <- train(
 
 plot(model)
 pred <- predict(model,newdata=testdat[,-2])
+conf<- table(testdat$Survived,pred)
+accuracy<- sum(diag(conf))/sum(conf)
+accuracy #83.14
+
+
+
+
+#glmnet
+
+myControl <- trainControl(
+  method = "cv", number = 10,
+  summaryFunction = twoClassSummary,
+  classProbs = TRUE, # IMPORTANT!
+  verboseIter = TRUE
+)
+
+
+modelglmnet <- train(Survived ~.,data=traindat,method="glmnet",trControl=myControl,tuneGrid=expand.grid(alpha=0:1,lambda=seq(0.0001,0.1,length=10)))
+
+
+
+pred <- predict(modelglmnet,newdata=testdat[,-2])
+conf<- table(testdat$Survived,pred)
+accuracy<- sum(diag(conf))/sum(conf)
+accuracy #0.82022
+
+
+#glm
+
+
+
+modelglm <- glm(Survived ~ Pclass+Sex +Age +SibSp +Embarked ,
+                
+                family=binomial(link='logit'),data=traindat)
+
+
+Anova(modelglm)
+
+
+pred <- predict(modelglm,newdata=testdat[,-2],type="response")
+pred <- ifelse(pred > 0.5,1,0)
+
 
 conf<- table(testdat$Survived,pred)
-
 accuracy<- sum(diag(conf))/sum(conf)
-accuracy #83.14 without cabin
-#0.8370787 with cabin
+accuracy #0.80
 
+
+
+
+#gbm
+
+modelgbm <- train(Survived ~.,data=traindat,method="gbm",trControl=myControl,tuneGrid=expand.grid(.interaction.depth = c(1, 5, 9), .n.trees = (1:15)*100, .shrinkage = 0.1 ,.n.minobsinnode =c(10)))
+
+
+pred <- predict(modelgbm,newdata=testdat[,-2])
+conf<- table(testdat$Survived,pred)
+accuracy<- sum(diag(conf))/sum(conf)
+accuracy #0.808
+
+#rf
+
+modelrf<- train(Survived ~.,data=traindat,method="rf",trControl=myControl,ntree=2000,tuneLength=50)
+pred <- predict(modelrf,newdata=testdat[,-2])
+
+conf<- table(testdat$Survived,pred)
+accuracy<- sum(diag(conf))/sum(conf)
+accuracy #0.8342
 
 
 
 
 
 # TEST DATA : check for all the unique titles 
+test <- read.csv("C:/Users/Amita/Downloads/test (1).csv",header=T,sep=",",na.strings = c("")) 
+
+
+test[is.na(test$Age),][5]<- mean(test$Age,na.rm=T) 
+
+test[is.na(test$Fare),][["Fare"]] <- mean(test$Fare,na.rm=TRUE)
+
+test <- test[,-8] # remove ticket
+
+summary(test)
+
 
 unique1 <- gsub(".*?,\\s(.*?)\\..*$","\\1",test$Name)
 test$unique<- unique1
@@ -195,9 +281,9 @@ test$unit <- unit_test
 test$unit<-factor(test$unit)
 
 #designate Cabin
-test$Cabin <- substr(test$Cabin,1,1)
-test$Cabin[test$Cabin %in% c("F","G","T",NA)] <- "X"
-test$Cabin<- factor(test$Cabin)
+#test$Cabin <- substr(test$Cabin,1,1)
+#test$Cabin[test$Cabin %in% c("F","G","T",NA)] <- "X"
+#test$Cabin<- factor(test$Cabin)
 
 
 #child?
@@ -208,19 +294,73 @@ test$isMother<- "Not Mother"
 test$isMother[test$Sex=="female" & test$Parch>0 & test$unique!="Miss"] <- "Mother"
 test$isMother<- factor(test$isMother)
 
-test<- test[,-3] # remove Names
+test<- test[,-c(3,9)] # remove Names and cabin
+
+
+
+
+
+
+#1.
+
+predranger <- predict(model, newdata = test)
+
+predrangernum <- as.numeric(levels(predranger))[predranger]
+
+#2.
+
+predglmnet <- predict(modelglmnet,newdata=test)
+predglmnet <- ifelse(predglmnet=="yes",1,0)
+
+
+#3.
+
+predglm <- predict(modelglm,newdata=test,type="response")
+predglm <- ifelse(predglm > 0.5,1,0)
+
+#4. 
+
+predgbm <- predict(modelgbm,newdata=test)
+predgbm <- ifelse(predgbm=="yes",1,0)
+
+
+#5.
+predgbm <- predict(modelgbm,newdata=test)
+predgbm <- ifelse(predgbm=="yes",1,0)
+
+#6. nnet
+
+prednnet<- predict(nnet.model,newdata=test)
+prednnetnum <- as.numeric(levels(prednnet))[prednnet]
+
+
+allPreds<-cbind(predrangernum,prednnetnum)
+
+
+
+vote<-function(dat){ # take in a df
+  f<-function(mat){     
+    a<-table(mat)
+    as.numeric(names(which.max(a)))
+  }
+  apply(dat,1,f)  # dat is the matrix, 1 is the application of the function over the rows, f is the function
+}
+
+
+
+testPredictions<-vote(allPreds)
+
+
+
+
+
+
 
 
 
 #kaggle
 
-
-test$Survived <- predict(model, newdata = test)
-submit <- data.frame(PassengerId = test$PassengerId, Survived = test$Survived)
-write.csv(submit, file = "submissioncabin.csv", row.names = FALSE)
-
-
-
-
+submit <- data.frame(PassengerId = test$PassengerId, Survived = testPredictions)
+write.csv(submit, file = "submissionensemble.csv", row.names = FALSE)
 
 
